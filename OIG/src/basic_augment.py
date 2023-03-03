@@ -17,7 +17,7 @@ software distributed under the License is distributed on an
 "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
-under the License. 
+under the License.
 """
 import gzip, json, os
 from collections import Counter
@@ -25,10 +25,10 @@ import random
 import re
 from collections import Counter
 try:
-  from nltk.corpus import stopwords as nltk_stopwords
-  nltk_stopwords.words() 
+    from nltk.corpus import stopwords as nltk_stopwords
+    nltk_stopwords.words()
 except:
-  os.system("python -m nltk.downloader stopwords")
+    os.system("python -m nltk.downloader stopwords")
 from nltk.corpus import stopwords as nltk_stopwords
 import re, random
 
@@ -41,8 +41,8 @@ stop_words = set(nltk_stopwords.words() + list({'"', "'", ".", "!", "?", ":", "c
 transition_prompts = {
   "generalization of": [
     "generally",
-    "as a generalization", 
-    "in general",              
+    "as a generalization",
+    "in general",
   ],
   "explanation of":[
     "as an explanation",
@@ -51,43 +51,43 @@ transition_prompts = {
     "explained step by step"
   ],
   "clarification of": [
-    "not only this", 
-    "indeed", 
-    "further", 
-    "as well as this", 
-    "but also that", 
-    "as well", 
+    "not only this",
+    "indeed",
+    "further",
+    "as well as this",
+    "but also that",
+    "as well",
     "as a matter of fact",
-    "what is more", 
-    "in addition to this", 
+    "what is more",
+    "in addition to this",
     "to to tell you the truth",
-    "furthermore", 
-    "besides this", 
-    "in fact", 
-    "actually", 
-    "to say nothing of", 
-    "let alone", 
-    "much less", 
-    "additionally", 
-    "not to mention", 
+    "furthermore",
+    "besides this",
+    "in fact",
+    "actually",
+    "to say nothing of",
+    "let alone",
+    "much less",
+    "additionally",
+    "not to mention",
     "that is to say",
-    "namely", 
+    "namely",
     "specifically",
-    "i mean to say", 
+    "i mean to say",
     "to put it another way",
     "in other words",
   ],
   "example of": [
-    "such as", 
-    "particularly", 
+    "such as",
+    "particularly",
     "including",
     "as an illustration",
     "for example",
-    "in particular", 
-    "for one thing", 
+    "in particular",
+    "for one thing",
     "to illustrate",
-    "for instance", 
-    "especially", 
+    "for instance",
+    "especially",
     "notably",
     "by way of example",
   ],
@@ -99,13 +99,13 @@ transition_prompts = {
     "as for this",
     "concerning this",
     "on the subject of this",
-    "the fact that", 
+    "the fact that",
   ],
   "similarity to": [
     "similarly",
     "in the same way",
     "in ta similar way",
-    "by the same token", 
+    "by the same token",
     "in a like manner",
     "in a similar manner",
     "equally likewise",
@@ -113,34 +113,34 @@ transition_prompts = {
   "contrast to": [
     "by way of contrast",
     "on the other hand",
-    "however", 
-    "and yet", 
-    "whereas", 
+    "however",
+    "and yet",
+    "whereas",
     "though",
-    "alternatively", 
+    "alternatively",
   ],
   "emphasis of": [
-    "even more", 
-    "above all", 
-    "indeed", 
+    "even more",
+    "above all",
+    "indeed",
     "more importantly",
     "besides"
   ],
   "concession to": [
-    "but even so", 
-    "nevertheless", 
+    "but even so",
+    "nevertheless",
     "even though",
     "on the other hand",
     "admittedly",
-    "however", 
-    "nonetheless", 
+    "however",
+    "nonetheless",
     "despite this",
     "notwithstanding this",
     "albeit",
-    "and still", 
+    "and still",
     "in spite of this",
     "regardless of this",
-    "and yet", 
+    "and yet",
     "though",
     "granted this",
     "be that as it may",
@@ -157,122 +157,122 @@ transition_prompts = {
       "in any event",
   ],
   "alternative to": [
-    "or at least", 
-    "or rather", 
+    "or at least",
+    "or rather",
     "instead"
   ],
-  "cause of or reason for": [ 
-    "for the simple reason that", 
-    "being that", 
-    "in view of the fact", 
-    "inasmuch as", 
+  "cause of or reason for": [
+    "for the simple reason that",
+    "being that",
+    "in view of the fact",
+    "inasmuch as",
     "because",
-    "because of the fact", 
-    "seeing that", 
-    "owing to the fact", 
-    "due to the fact that", 
-    "in that since", 
+    "because of the fact",
+    "seeing that",
+    "owing to the fact",
+    "due to the fact that",
+    "in that since",
     "forasmuch as",
   ],
-  "condition for": [ 
+  "condition for": [
     "on the condition",
-    "granted that", 
-    "provided that", 
-    "in case", 
-    "in the event that", 
-    "so long as", 
-    "as long as", 
-    "unless given that," 
-    "granting that", 
-    "providing that", 
-    "even if", 
+    "granted that",
+    "provided that",
+    "in case",
+    "in the event that",
+    "so long as",
+    "as long as",
+    "unless given that,"
+    "granting that",
+    "providing that",
+    "even if",
     "only if",
-    ], 
+    ],
   "result of or consequence of": [
-    "as a result of this", 
-    "consequently", 
-    "hence", 
+    "as a result of this",
+    "consequently",
+    "hence",
     "then",
-    "for this reason", 
-    "thus", 
-    "because of this", 
-    "in consequence", 
-    "so that", 
-    "accordingly", 
-    "as a consequence", 
-    "so much so that", 
-    "therefore",     
-    "under those circumstances", 
+    "for this reason",
+    "thus",
+    "because of this",
+    "in consequence",
+    "so that",
+    "accordingly",
+    "as a consequence",
+    "so much so that",
+    "therefore",
+    "under those circumstances",
     "in that case",
     "if not",
-    "that being the case", 
-    "if so", 
-    "otherwise", 
+    "that being the case",
+    "if so",
+    "otherwise",
     "=>"
   ],
-  "purpose of":[ 
-    "for the purpose of", 
-    "in the hope that", 
-    "for fear that", 
-    "so that", 
-    "with this intention", 
-    "to the end that", 
-    "in order to", 
-    "lest", 
-    "with this in mind", 
-    "in order that", 
-    "so as to", 
+  "purpose of":[
+    "for the purpose of",
+    "in the hope that",
+    "for fear that",
+    "so that",
+    "with this intention",
+    "to the end that",
+    "in order to",
+    "lest",
+    "with this in mind",
+    "in order that",
+    "so as to",
   ],
-  "ordering of": [ 
+  "ordering of": [
     "in the first place"
-    "in the second place", 
-    "initially", 
-    "to start with", 
-    "first of all", 
-    "thirdly", 
-    "to begin with", 
-    "at first", 
-    "for a start", 
+    "in the second place",
+    "initially",
+    "to start with",
+    "first of all",
+    "thirdly",
+    "to begin with",
+    "at first",
+    "for a start",
     "secondly",
   ],
-  "continuation of": [ 
-    "subsequently", 
-    "previously", 
-    "eventually", 
-    "next up", 
-    "before this", 
-    "afterwards", 
-    "after this", 
-    "then afterwards", 
-    "after this", 
+  "continuation of": [
+    "subsequently",
+    "previously",
+    "eventually",
+    "next up",
+    "before this",
+    "afterwards",
+    "after this",
+    "then afterwards",
+    "after this",
     "then",
     ],
   "conclusion to": [
     "consequently",
     "given these points",
     "therefore",
-    "hence", 
-    "in conclusion", 
+    "hence",
+    "in conclusion",
     "in a word",
-    "to conclude with", 
-    "as a final point", 
-    "eventually", 
+    "to conclude with",
+    "as a final point",
+    "eventually",
     "at last",
-    "last but not least", 
-    "in the end", 
-    "finally", 
+    "last but not least",
+    "in the end",
+    "finally",
     "lastly",
   ],
   "digression from": [
-    "to change the topic", 
-    "incidentally", 
+    "to change the topic",
+    "incidentally",
     "by the way",
   ],
   "resumption of": [
       "to get back to the point",
-      "to resume", 
-      "anyhow", 
-      "anyway", 
+      "to resume",
+      "anyhow",
+      "anyway",
       "at any rate",
       "to return to the subject",
   ],
@@ -283,26 +283,26 @@ transition_prompts = {
     "to make a long story",
     "in short",
     "as I have said",
-    "to sum up", 
+    "to sum up",
     "overall",
     "as has been mentioned",
     "to summarize",
-    "to be brief", 
+    "to be brief",
     "briefly",
-    "in all", 
-    "on the whole", 
-    "as has been noted", 
-    "to put it briefly", 
-    "in sum", 
-    "altogether", 
+    "in all",
+    "on the whole",
+    "as has been noted",
+    "to put it briefly",
+    "in sum",
+    "altogether",
     "in short",
-  ],  
+  ],
   "emotional response to":[
     "they felt",
     "it felt",
     "i felt",
-    "they wanted to because", 
-    "their motivation being", 
+    "they wanted to because",
+    "their motivation being",
     "their intention being",
     "their desire being",
     "what they wanted was"
@@ -325,7 +325,7 @@ transition_prompts = {
    ],
 }
 transition_prompt_inv = dict(itertools.chain(*[[(c,a) for c in b] for a, b in transition_prompts.items()]))
- 
+
 styles = {'NA':'narrative',
  'IN': 'informational description',
  'OP':'opinion',
@@ -389,123 +389,123 @@ def cjk_detect(texts):
 
 
 def get_main_non_stopwords(text, top_n=6):
-  text_arr = [s.strip("~!@#$%^&*()_-+={}:;\"'1234567890<>,.?/") for s in text.split() if s[0] == s[0].upper() and s[0].lower()  in "qwertyuiopasdfghjklzxcvbnm"]
-  verb_arr = [s for s in text.split() if s.endswith("ing") or s.endswith("ed")]
-  words = list(set([a[0] for a in Counter([s for s in text_arr if len(s) > 2 and s.lower() not in stop_words]).most_common(int(top_n/2))] + 
-      [a[0] for a in Counter([s for s in verb_arr if len(s) > 2 and s.lower() not in stop_words]).most_common(int(top_n/2))]))
-  words_position = [(word, text.index(word)) for word in words]
-  words_position.sort(key = lambda a: a[1])
-  return [a[0] for a in words_position]
+    text_arr = [s.strip("~!@#$%^&*()_-+={}:;\"'1234567890<>,.?/") for s in text.split() if s[0] == s[0].upper() and s[0].lower()  in "qwertyuiopasdfghjklzxcvbnm"]
+    verb_arr = [s for s in text.split() if s.endswith("ing") or s.endswith("ed")]
+    words = list(set([a[0] for a in Counter([s for s in text_arr if len(s) > 2 and s.lower() not in stop_words]).most_common(int(top_n/2))] +
+        [a[0] for a in Counter([s for s in verb_arr if len(s) > 2 and s.lower() not in stop_words]).most_common(int(top_n/2))]))
+    words_position = [(word, text.index(word)) for word in words]
+    words_position.sort(key = lambda a: a[1])
+    return [a[0] for a in words_position]
 
 
 def get_metadata(text, labels):
-  num_sent =  len(re.split(r'[.!?]+', text) )
-  subject = get_main_non_stopwords(text)
-  is_nsfw = False
-  text_lower = text.lower()
-  if " xxx " in text_lower or " porn " in text_lower or " bdsm " in text_lower or " anal " in text_lower or " pussy " in text_lower or\
-    " fuck " in text_lower or " cunt " in text_lower or " dildo " in text_lower or " cock " in text_lower or \
-    " horny " in text_lower or " cock " in text_lower:
-    is_nsfw = True
-  subject = ", ".join(subject)
-  if not labels:
-    return (subject, "NSFW" if is_nsfw else "", "NSFW" if is_nsfw else "", num_sent)
-  style = labels[0] #TODO - do mixed styles
-  if random.randint(0,1)== 0:
-    a_type = text_type[style]
-  else:
-    a_type = text_type2[style]
-  if styles[style] == "instruction" and "1." in text:
-    style = "how-to"
-    a_type = "how-to"
-  else:
-    style = styles[style]
-  if is_nsfw:
-    style = "NSFW " + style
-    a_type = "NSFW " + a_type
-  return (subject, a_type, style, num_sent)
+    num_sent =  len(re.split(r'[.!?]+', text) )
+    subject = get_main_non_stopwords(text)
+    is_nsfw = False
+    text_lower = text.lower()
+    if " xxx " in text_lower or " porn " in text_lower or " bdsm " in text_lower or " anal " in text_lower or " pussy " in text_lower or\
+      " fuck " in text_lower or " cunt " in text_lower or " dildo " in text_lower or " cock " in text_lower or \
+      " horny " in text_lower or " cock " in text_lower:
+        is_nsfw = True
+    subject = ", ".join(subject)
+    if not labels:
+        return (subject, "NSFW" if is_nsfw else "", "NSFW" if is_nsfw else "", num_sent)
+    style = labels[0] #TODO - do mixed styles
+    if random.randint(0,1)== 0:
+        a_type = text_type[style]
+    else:
+        a_type = text_type2[style]
+    if styles[style] == "instruction" and "1." in text:
+        style = "how-to"
+        a_type = "how-to"
+    else:
+        style = styles[style]
+    if is_nsfw:
+        style = "NSFW " + style
+        a_type = "NSFW " + a_type
+    return (subject, a_type, style, num_sent)
 
 
 #word repition ration
 def number_words_ratio(text):
-  return len(list(set(text.lower().split())))/len(text)
+    return len(list(set(text.lower().split())))/len(text)
 
 
 def basic_augment(dialog):
-  new_dialog = []
-  dialog = dialog.split("User:")
-  for d in dialog:
-    d = d.strip()
-    if not d: continue
-    d_arr =  d.split("\nAssistant:")
-    if len(d_arr) <= 1:
-      #print (d_arr)
-      continue
-    instruction, response =d_arr
-    instruction, response = instruction.strip(), response.strip()
-    response = response.lstrip("+]),.?/~!^&*) ")
-    if response.count(".") >3 and ("The" in response or "the" in response or " an " in response  or " of " in response  or " can " in response  or " should " in response  or " on " in response):
-      reponse = response[0].upper()+response[1:]
-      response = response.split(".")
-      if response[-1] == '':
-        response = response[:-1]
-        response[-1] =response[-1]+"."
-      choice = random.randint(0,12)
-      if choice == 0 and len(response[0].strip()) > 5:
-        if random.randint(0,1) == 0 or len(response[0].split()) <=3:
-          instruction = instruction + f". Start with the sentence '{response[0].strip()}'."
-        else:
-          words = response[0].strip().split()
-          words = " ".join(words[:random.randint(3, min(len(words), 5))])
-          instruction = instruction + f". Start with the words '{words}'."          
-        new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-        continue
-      elif choice == 1 and len(response[-1].strip()) > 5:
-        if random.randint(0,1) == 0 or len(response[-1].split()) <=3:
-          instruction = instruction + f". End with the sentence '{response[-1].strip()}'."
-        else:
-          words = response[-1].strip().split()
-          words = " ".join(words[:random.randint(3, min(len(words), 5))])
-          instruction = instruction + f". End with the words '{words}'."
-        new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-        continue
-      elif choice == 2:
-        orig_response =response
-        response_missing = response[int(len(response)/2)]
-        ents = get_main_non_stopwords(response_missing)
-        if  ents:
-          ents = ", ".join(ents)
-          response = [r for r in response if r != response_missing]
-          new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-          new_dialog.append(f"User: Add another sentence about {ents}.\nAssistant: " + ". ".join(orig_response) + "\n")
-          continue
-      elif choice == 3:
-          if "\n" not in response[0]:
-            new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-            new_dialog.append("User: Reverse the sentences.\nAssistant: " + ".".join(reversed(response)) + "\n")
+    new_dialog = []
+    dialog = dialog.split("User:")
+    for d in dialog:
+        d = d.strip()
+        if not d: continue
+        d_arr =  d.split("\nAssistant:")
+        if len(d_arr) <= 1:
+            #print (d_arr)
             continue
-      elif choice == 4:
-          if "\n" not in response[0]:
-            new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-            tmp = response[-1].strip(".")
-            response[-1] = " "+response[0]+". "
-            response[0] = tmp
-            new_dialog.append("User: Swap the first and the last sentence.\nAssistant: " + ".".join(response) + "\n") 
-            continue         
-      elif choice == 5:
-          new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-          response = response[:-1]
-          response[-1] = response[-1]+". "
-          new_dialog.append("User: Delete the last sentence.\nAssistant: " + ".".join(response) + "\n")       
-          continue
-      elif choice == 6:
-          if "\n" not in response[0]:
-            new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-            response = response[1:]
-            new_dialog.append("User: Delete the first sentence.\nAssistant: " + ".".join(response) + "\n")    
-            continue  
-    else:
-      response = response.split(".")
-    new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
-  new_dialog = [d.replace("  ", " ").replace(" .", ".").replace("?.", "?").replace(".. ", ". ").replace(".'.", ".'").replace(".\".", ".\"").replace("..\n", ".\n")  for d in new_dialog]
-  return "".join(new_dialog).strip()    
+        instruction, response =d_arr
+        instruction, response = instruction.strip(), response.strip()
+        response = response.lstrip("+]),.?/~!^&*) ")
+        if response.count(".") >3 and ("The" in response or "the" in response or " an " in response  or " of " in response  or " can " in response  or " should " in response  or " on " in response):
+            reponse = response[0].upper()+response[1:]
+            response = response.split(".")
+            if response[-1] == '':
+                response = response[:-1]
+                response[-1] =response[-1]+"."
+            choice = random.randint(0,12)
+            if choice == 0 and len(response[0].strip()) > 5:
+                if random.randint(0,1) == 0 or len(response[0].split()) <=3:
+                    instruction = instruction + f". Start with the sentence '{response[0].strip()}'."
+                else:
+                    words = response[0].strip().split()
+                    words = " ".join(words[:random.randint(3, min(len(words), 5))])
+                    instruction = instruction + f". Start with the words '{words}'."
+                new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                continue
+            elif choice == 1 and len(response[-1].strip()) > 5:
+                if random.randint(0,1) == 0 or len(response[-1].split()) <=3:
+                    instruction = instruction + f". End with the sentence '{response[-1].strip()}'."
+                else:
+                    words = response[-1].strip().split()
+                    words = " ".join(words[:random.randint(3, min(len(words), 5))])
+                    instruction = instruction + f". End with the words '{words}'."
+                new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                continue
+            elif choice == 2:
+                orig_response =response
+                response_missing = response[int(len(response)/2)]
+                ents = get_main_non_stopwords(response_missing)
+                if  ents:
+                    ents = ", ".join(ents)
+                    response = [r for r in response if r != response_missing]
+                    new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                    new_dialog.append(f"User: Add another sentence about {ents}.\nAssistant: " + ". ".join(orig_response) + "\n")
+                    continue
+            elif choice == 3:
+                if "\n" not in response[0]:
+                    new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                    new_dialog.append("User: Reverse the sentences.\nAssistant: " + ".".join(reversed(response)) + "\n")
+                    continue
+            elif choice == 4:
+                if "\n" not in response[0]:
+                    new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                    tmp = response[-1].strip(".")
+                    response[-1] = " "+response[0]+". "
+                    response[0] = tmp
+                    new_dialog.append("User: Swap the first and the last sentence.\nAssistant: " + ".".join(response) + "\n")
+                    continue
+            elif choice == 5:
+                new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                response = response[:-1]
+                response[-1] = response[-1]+". "
+                new_dialog.append("User: Delete the last sentence.\nAssistant: " + ".".join(response) + "\n")
+                continue
+            elif choice == 6:
+                if "\n" not in response[0]:
+                    new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+                    response = response[1:]
+                    new_dialog.append("User: Delete the first sentence.\nAssistant: " + ".".join(response) + "\n")
+                    continue
+        else:
+            response = response.split(".")
+        new_dialog.append("User: " + instruction + "\nAssistant: " + ".".join(response) + "\n")
+    new_dialog = [d.replace("  ", " ").replace(" .", ".").replace("?.", "?").replace(".. ", ". ").replace(".'.", ".'").replace(".\".", ".\"").replace("..\n", ".\n")  for d in new_dialog]
+    return "".join(new_dialog).strip()

@@ -18,23 +18,22 @@ software distributed under the License is distributed on an
 "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
-under the License. 
+under the License.
 """
+
 import os
-try:
-  import datasets, transformers
-except:
-  import os
-  import nltk
-  nltk.download('punkt')
-  os.system("pip install datasets  transformers bitsandbytes accelerate sentencepiece")
-  os.system("pip install spacy==2.1.8")
-  os.system("pip install scispacy==0.2.3")
-  os.system("pip install blackstone==0.1")
-  os.system("pip install https://blackstone-model.s3-eu-west-1.amazonaws.com/en_blackstone_proto-0.0.1.tar.gz")
-  os.system("pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.0/en_ner_craft_md-0.2.0.tar.gz")
-  os.system("python -m spacy download en_core_web_sm")
-  
+import datasets, transformers
+
+import nltk
+nltk.download('punkt')
+os.system("pip install datasets  transformers bitsandbytes accelerate sentencepiece")
+os.system("pip install spacy==2.1.8")
+os.system("pip install scispacy==0.2.3")
+os.system("pip install blackstone==0.1")
+os.system("pip install https://blackstone-model.s3-eu-west-1.amazonaws.com/en_blackstone_proto-0.0.1.tar.gz")
+os.system("pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.0/en_ner_craft_md-0.2.0.tar.gz")
+os.system("python -m spacy download en_core_web_sm")
+
 #RESTART THE RUNTIME
 
 from transformers import AutoTokenizer, OPTForCausalLM,  AutoModelForCausalLM, AutoModel, T5Tokenizer, T5PreTrainedModel
@@ -48,7 +47,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from subprocess import call
 import os
-#os.system("nvidia-smi --format=csv --query-gpu=index,name,driver_version,memory.total,memory.used,memory.free > __gpu_stats.csv")  
+#os.system("nvidia-smi --format=csv --query-gpu=index,name,driver_version,memory.total,memory.used,memory.free > __gpu_stats.csv")
 #gpu_memory = int(open("__gpu_stats.csv").read().split("\n")[1].split(",")[3].strip().split()[0])*100000
 
 
@@ -63,7 +62,7 @@ from nltk import sent_tokenize
 
 import torch
 from transformers import(
-    AutoModelForSeq2SeqLM, 
+    AutoModelForSeq2SeqLM,
     AutoTokenizer,
     PreTrainedModel,
     PreTrainedTokenizer,
@@ -71,12 +70,12 @@ from transformers import(
 
 
 try:
-  if basic_nlp is None: pass
+    if basic_nlp is None: pass
 except:
-  basic_nlp = spacy.load('en_core_web_sm')
-  sci = spacy.load("en_ner_craft_md")
-  blackstone = spacy.load("en_blackstone_proto")
-  # add the other scispacy ner
+    basic_nlp = spacy.load('en_core_web_sm')
+    sci = spacy.load("en_ner_craft_md")
+    blackstone = spacy.load("en_blackstone_proto")
+    # add the other scispacy ner
 
 import math
 import pickle
@@ -87,7 +86,7 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, AutoModel
 
 import json
-  
+
 
 logger = logging.getLogger(__name__)
 # adapted from https://github.com/patil-suraj/question_generation which is under the MIT License
@@ -116,7 +115,7 @@ class QGPipeline:
             self.model.to(self.device).eval()
             if device == "cpu":
                 self.model = torch.quantization.quantize_dynamic(self.model.float(), {torch.nn.Linear}, dtype=torch.qint8)
-            else:  
+            else:
                 self.model = self.model.half().to(device)
 
         if self.ans_model is not self.model:
@@ -124,11 +123,11 @@ class QGPipeline:
                 self.ans_model.to(self.device).eval()
                 if device == "cpu":
                     self.ans_model = torch.quantization.quantize_dynamic(self.ans_model.float(), {torch.nn.Linear}, dtype=torch.qint8)
-                else:  
+                else:
                     self.ans_model = self.ans_model.half().to(device)
 
         assert self.model.__class__.__name__ in ["T5ForConditionalGeneration", "BartForConditionalGeneration"]
-        
+
         if "T5ForConditionalGeneration" in self.model.__class__.__name__:
             self.model_type = "t5"
         else:
@@ -139,74 +138,74 @@ class QGPipeline:
         self.ans_model.eval()
         ret = []
         with torch.no_grad():
-          
-          if type(inputs) is str:
-            inputs = [inputs]
-          default_answers=[]
-          if 'default_answers' in generate_kwargs:
-            default_answers = generate_kwargs['default_answers']
-            if default_answers and type(default_answers[0]) is str:
-              default_answers = [default_answers] * len(inputs)
-          if len(default_answers) < len(inputs):
-            default_answers.extend([[]]*(len(inputs)-len(default_answers)))
-          #TODO - we could do in batches that is approximately N words to maximize GPU usage
-          for input, default_answer in zip(inputs, default_answers):
-            qg_examples = []
-            input = " ".join(input.split())
-            sents, answers = self._extract_answers(input)
-            if self.default_answers:
-              answers.append(self.default_answers)
-            if default_answer:
-              answers.append(default_answer)
-            flat_answers = list(itertools.chain(*answers))
-            
-            if len(flat_answers) == 0:
-              ret.append([])
-              continue
-            answers = [flat_answers]*len(sents) # multi-way q/a
-            if self.qg_format == "prepend":
-                qg_examples.extend(self._prepare_inputs_for_qg_from_answers_prepend(inputs, answers))
-            else:
-                qg_examples.extend(self._prepare_inputs_for_qg_from_answers_hl(sents, answers))
-            if  qg_examples:
-              qg_inputs = [example['source_text'] for example in qg_examples]
-              questions = self._generate_questions(qg_inputs)
-              output = list(set([(example['answer'], que) for example, que in zip(qg_examples, questions)]))
-              ret.append([{'answer': answer, 'question': que} for answer, que in output])
-            else:
-              ret.append([])
+
+            if type(inputs) is str:
+                inputs = [inputs]
+            default_answers=[]
+            if 'default_answers' in generate_kwargs:
+                default_answers = generate_kwargs['default_answers']
+                if default_answers and type(default_answers[0]) is str:
+                    default_answers = [default_answers] * len(inputs)
+            if len(default_answers) < len(inputs):
+                default_answers.extend([[]]*(len(inputs)-len(default_answers)))
+            #TODO - we could do in batches that is approximately N words to maximize GPU usage
+            for input, default_answer in zip(inputs, default_answers):
+                qg_examples = []
+                input = " ".join(input.split())
+                sents, answers = self._extract_answers(input)
+                if self.default_answers:
+                    answers.append(self.default_answers)
+                if default_answer:
+                    answers.append(default_answer)
+                flat_answers = list(itertools.chain(*answers))
+
+                if len(flat_answers) == 0:
+                    ret.append([])
+                    continue
+                answers = [flat_answers]*len(sents) # multi-way q/a
+                if self.qg_format == "prepend":
+                    qg_examples.extend(self._prepare_inputs_for_qg_from_answers_prepend(inputs, answers))
+                else:
+                    qg_examples.extend(self._prepare_inputs_for_qg_from_answers_hl(sents, answers))
+                if  qg_examples:
+                    qg_inputs = [example['source_text'] for example in qg_examples]
+                    questions = self._generate_questions(qg_inputs)
+                    output = list(set([(example['answer'], que) for example, que in zip(qg_examples, questions)]))
+                    ret.append([{'answer': answer, 'question': que} for answer, que in output])
+                else:
+                    ret.append([])
         return ret
-    
+
     def _generate_questions(self, inputs):
         inputs = self._tokenize(inputs, padding=True, truncation=True)
-        
+
         outs = self.model.generate(
-            input_ids=inputs['input_ids'].to(self.device), 
-            attention_mask=inputs['attention_mask'].to(self.device), 
+            input_ids=inputs['input_ids'].to(self.device),
+            attention_mask=inputs['attention_mask'].to(self.device),
             max_length=32,
             num_beams=4,
         )
-        
+
         questions = [self.tokenizer.decode(ids, skip_special_tokens=True) for ids in outs]
         return questions
-    
+
     def _extract_answers(self, context):
         sents, inputs = self._prepare_inputs_for_ans_extraction(context)
         inputs = self._tokenize(inputs, padding=True, truncation=True)
         self.ans_model.eval()
         with torch.no_grad():
-          outs = self.ans_model.generate(
-              input_ids=inputs['input_ids'].to(self.device), 
-              attention_mask=inputs['attention_mask'].to(self.device), 
-              max_length=32,
-          )
-        
+            outs = self.ans_model.generate(
+                input_ids=inputs['input_ids'].to(self.device),
+                attention_mask=inputs['attention_mask'].to(self.device),
+                max_length=32,
+            )
+
         dec = [self.ans_tokenizer.decode(ids, skip_special_tokens=False) for ids in outs]
         answers = [item.replace("<pad>","").replace("  ", " ").strip().split('<sep>') for item in dec]
         answers = [i[:-1] for i in answers if i !=[]]
-        
+
         return sents, answers
-    
+
     def _tokenize(self,
         inputs,
         padding=True,
@@ -215,7 +214,7 @@ class QGPipeline:
         max_length=512
     ):
         inputs = self.tokenizer.batch_encode_plus(
-            inputs, 
+            inputs,
             max_length=max_length,
             add_special_tokens=add_special_tokens,
             truncation=truncation,
@@ -224,7 +223,7 @@ class QGPipeline:
             return_tensors="pt"
         )
         return inputs
-    
+
     def _prepare_inputs_for_ans_extraction(self, text):
         sents = sent_tokenize(text)
 
@@ -236,13 +235,13 @@ class QGPipeline:
                     sent = "<hl> %s <hl>" % sent
                 source_text = "%s %s" % (source_text, sent)
                 source_text = source_text.strip()
-            
+
             if self.model_type == "t5":
                 source_text = source_text + " </s>"
             inputs.append(source_text)
 
         return sents, inputs
-    
+
     def _prepare_inputs_for_qg_from_answers_hl(self, sents, answers):
         inputs = []
         for i, answer in enumerate(answers):
@@ -250,23 +249,23 @@ class QGPipeline:
             for answer_text in answer:
                 sent = sents[i]
                 sents_copy = sents[:]
-                
+
                 answer_text = answer_text.strip()
                 if answer_text.lower() not in sent.lower(): continue
                 ans_start_idx = sent.lower().index(answer_text.lower())
-                
+
                 sent = f"{sent[:ans_start_idx]} <hl> {answer_text} <hl> {sent[ans_start_idx + len(answer_text): ]}"
                 sents_copy[i] = sent
-                
+
                 source_text = " ".join(sents_copy)
-                source_text = f"generate question: {source_text}" 
+                source_text = f"generate question: {source_text}"
                 if self.model_type == "t5":
                     source_text = source_text + " </s>"
-                
+
                 inputs.append({"answer": answer_text, "source_text": source_text})
-        
+
         return inputs
-    
+
     def _prepare_inputs_for_qg_from_answers_prepend(self, context, answers):
         flat_answers = list(itertools.chain(*answers))
         examples = []
@@ -274,15 +273,15 @@ class QGPipeline:
             source_text = f"answer: {answer} context: {context}"
             if self.model_type == "t5":
                 source_text = source_text + " </s>"
-            
+
             examples.append({"answer": answer, "source_text": source_text})
         return examples
 
-    
+
 class MultiTaskQAQGPipeline(QGPipeline):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-    
+
     def __call__(self, inputs: Union[Dict, str], **generate_kwargs):
         if type(inputs) in (list, str):
             # do qg
@@ -290,20 +289,20 @@ class MultiTaskQAQGPipeline(QGPipeline):
         else:
             # do qa
             return self._extract_answer(inputs["question"], inputs["context"], **generate_kwargs)
-    
+
     def _prepare_inputs_for_qa(self, question, context):
         source_text = f"question: {question}  context: {context}"
         if self.model_type == "t5":
             source_text = source_text + " </s>"
         return  source_text
-    
+
     def _extract_answer(self, question, context):
         source_text = self._prepare_inputs_for_qa(question, context)
         inputs = self._tokenize([source_text], padding=False)
-    
+
         outs = self.model.generate(
-            input_ids=inputs['input_ids'].to(self.device), 
-            attention_mask=inputs['attention_mask'].to(self.device), 
+            input_ids=inputs['input_ids'].to(self.device),
+            attention_mask=inputs['attention_mask'].to(self.device),
             max_length=16,
         )
 
@@ -326,12 +325,12 @@ class E2EQGPipeline:
         self.model.to(self.device)
 
         assert self.model.__class__.__name__ in ["T5ForConditionalGeneration", "BartForConditionalGeneration"]
-        
+
         if "T5ForConditionalGeneration" in self.model.__class__.__name__:
             self.model_type = "t5"
         else:
             self.model_type = "bart"
-        
+
         self.default_generate_kwargs = {
             "max_length": 256,
             "num_beams": 4,
@@ -339,7 +338,7 @@ class E2EQGPipeline:
             "no_repeat_ngram_size": 3,
             "early_stopping": True,
         }
-    
+
     def __call__(self, context: str, **generate_kwargs):
         inputs = self._prepare_inputs_for_e2e_qg(context)
 
@@ -347,9 +346,9 @@ class E2EQGPipeline:
         # find a better way to do this
         if not generate_kwargs:
             generate_kwargs = self.default_generate_kwargs
-        
+
         input_length = inputs["input_ids"].shape[-1]
-        
+
         # max_length = generate_kwargs.get("max_length", 256)
         # if input_length < max_length:
         #     logger.warning(
@@ -359,7 +358,7 @@ class E2EQGPipeline:
         #     )
 
         outs = self.model.generate(
-            input_ids=inputs['input_ids'].to(self.device), 
+            input_ids=inputs['input_ids'].to(self.device),
             attention_mask=inputs['attention_mask'].to(self.device),
             **generate_kwargs
         )
@@ -368,15 +367,15 @@ class E2EQGPipeline:
         questions = prediction.split("<sep>")
         questions = [question.strip() for question in questions[:-1]]
         return questions
-    
+
     def _prepare_inputs_for_e2e_qg(self, context):
         source_text = f"generate questions: {context}"
         if self.model_type == "t5":
             source_text = source_text + " </s>"
-        
+
         inputs = self._tokenize([source_text], padding=False)
         return inputs
-    
+
     def _tokenize(
         self,
         inputs,
@@ -386,7 +385,7 @@ class E2EQGPipeline:
         max_length=512
     ):
         inputs = self.tokenizer.batch_encode_plus(
-            inputs, 
+            inputs,
             max_length=max_length,
             add_special_tokens=add_special_tokens,
             truncation=truncation,
@@ -443,7 +442,7 @@ def pipeline(
     if ans_model is None:
         ans_model = targeted_task["default"].get("ans_model", None)
     if isinstance(model, str) and isinstance(ans_model, str) and model == ans_model:
-      models_same = True
+        models_same = True
     # Try to infer tokenizer from model or config name (if provided as str)
     if tokenizer is None:
         if isinstance(model, str):
@@ -454,7 +453,7 @@ def pipeline(
                 "Impossible to guess which tokenizer to use. "
                 "Please provided a PretrainedTokenizer class or a path/identifier to a pretrained tokenizer."
             )
-    
+
     # Instantiate tokenizer if needed
     if isinstance(tokenizer, (str, tuple)):
         if isinstance(tokenizer, tuple):
@@ -464,8 +463,8 @@ def pipeline(
             #print(tokenizer)
             tokenizer = AutoTokenizer.from_pretrained(tokenizer)
 
-                
-    
+
+
     # Instantiate model if needed
     if isinstance(model, str):
         model = AutoModelForSeq2SeqLM.from_pretrained(model).eval()
@@ -473,25 +472,25 @@ def pipeline(
             model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
         else:
             model = model.half().to(device)
-                
+
     if task == "question-generation":
         if ans_model is None:
             # load default ans model
             ans_model = targeted_task["default"]["ans_model"]
             ans_tokenizer = AutoTokenizer.from_pretrained(ans_model)
             if models_same:
-              ans_model = model
+                ans_model = model
             else:
-              ans_model = AutoModelForSeq2SeqLM.from_pretrained(ans_model).eval()
-              if device == "cpu":
-                ans_model = torch.quantization.quantize_dynamic(ans_model, {torch.nn.Linear}, dtype=torch.qint8)
-              else:
-                ans_model = ans_model.half().to(device)
-                
+                ans_model = AutoModelForSeq2SeqLM.from_pretrained(ans_model).eval()
+                if device == "cpu":
+                    ans_model = torch.quantization.quantize_dynamic(ans_model, {torch.nn.Linear}, dtype=torch.qint8)
+                else:
+                    ans_model = ans_model.half().to(device)
+
         else:
             # Try to infer tokenizer from model or config name (if provided as str)
             if models_same:
-              ans_tokenizer = tokenizer
+                ans_tokenizer = tokenizer
             elif ans_tokenizer is None:
                 if isinstance(ans_model, str):
                     ans_tokenizer = ans_model
@@ -501,7 +500,7 @@ def pipeline(
                         "Impossible to guess which tokenizer to use. "
                         "Please provided a PretrainedTokenizer class or a path/identifier to a pretrained tokenizer."
                     )
-            
+
             # Instantiate tokenizer if needed
             if isinstance(ans_tokenizer, (str, tuple)):
                 if isinstance(ans_tokenizer, tuple):
@@ -511,14 +510,14 @@ def pipeline(
                     ans_tokenizer = AutoTokenizer.from_pretrained(ans_tokenizer)
 
             if models_same:
-              ans_model = model
+                ans_model = model
             elif isinstance(ans_model, str):
                 ans_model = AutoModelForSeq2SeqLM.from_pretrained(ans_model).eval()
                 if device == "cpu":
                     ans_model = torch.quantization.quantize_dynamic(ans_model, {torch.nn.Linear}, dtype=torch.qint8)
                 else:
                     ans_model = ans_model.half().to(device)
-    
+
     if task == "e2e-qg":
         return task_class(model=model, tokenizer=tokenizer, device=device)
     elif task == "question-generation":
@@ -551,36 +550,36 @@ def encode_rankgen(inputs, vectors_type="prefix", device='cuda', **model_args):
         inputs = ['suffi ' + input for input in inputs]
     input_ids = rankgen_tokenizer(inputs, padding=True, return_tensors="pt").to(device)
     for key, val in model_args.items():
-      input_ids[key] = val
+        input_ids[key] = val
     with torch.no_grad():
-      batch_embeddings = rankgen_model(**input_ids)
+        batch_embeddings = rankgen_model(**input_ids)
     return batch_embeddings
 
 
 def run_model(input_string, model, tokenizer, device='cuda', **generator_args):
-  with torch.no_grad():
-    input_ids = tokenizer(input_string, padding=True, return_tensors="pt")
-    input_ids = input_ids.to(device)
-    input_ids['no_repeat_ngram_size']=max(generator_args.get('no_repeat_ngram_size',4), 4)
-    input_ids['do_sample']=True
-    input_ids['top_p']=True
-    input_ids['do_sample']=0.95
-    input_ids['penalty_alpha']=0.6
-    input_ids['top_k']=10
-    if 'galactica' in tokenizer.name_or_path and 'token_type_ids' in input_ids:
-      del input_ids['token_type_ids']
-    for key, val in generator_args.items():
-      input_ids[key] = val    
-    res = model.generate(**input_ids)
-    return [ret.replace("..", ".").replace(".-", ".").replace("..", ".").replace("--", "-").replace("--", "-") for ret in tokenizer.batch_decode(res, skip_special_tokens=True)]
+    with torch.no_grad():
+        input_ids = tokenizer(input_string, padding=True, return_tensors="pt")
+        input_ids = input_ids.to(device)
+        input_ids['no_repeat_ngram_size']=max(generator_args.get('no_repeat_ngram_size',4), 4)
+        input_ids['do_sample']=True
+        input_ids['top_p']=True
+        input_ids['do_sample']=0.95
+        input_ids['penalty_alpha']=0.6
+        input_ids['top_k']=10
+        if 'galactica' in tokenizer.name_or_path and 'token_type_ids' in input_ids:
+            del input_ids['token_type_ids']
+        for key, val in generator_args.items():
+            input_ids[key] = val
+        res = model.generate(**input_ids)
+        return [ret.replace("..", ".").replace(".-", ".").replace("..", ".").replace("--", "-").replace("--", "-") for ret in tokenizer.batch_decode(res, skip_special_tokens=True)]
 
 #Mean Pooling - Take attention mask into account for correct averaging
 #TODO, mask out the prefix for data that isn't the first portion of a prefixed text.
 def mean_pooling(model_output, attention_mask):
     with torch.no_grad():
-      token_embeddings = model_output.last_hidden_state
-      input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
-      return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        token_embeddings = model_output.last_hidden_state
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
 def generate_ext(para, model, tokenizer, return_answer_only=True, do_self_contrastive=True, max_length=512, max_return_sequences=4, ret=None, do_sample=True, do_beam=False, device="cuda", target_lang=None):
@@ -589,122 +588,122 @@ def generate_ext(para, model, tokenizer, return_answer_only=True, do_self_contra
     input_ids = input_ids.to(device)
     if ret is None: ret = {}
     with torch.no_grad():
-      if do_sample:
-          # Here we use top_k / top_k random sampling. It generates more diverse queries, but of lower quality
-          outputs = model.generate(
-                input_ids=input_ids,
-                max_length=max_length,
-                no_repeat_ngram_size=4, 
-                do_sample=True,
-                top_p=0.95,
-                penalty_alpha=0.6 if do_self_contrastive else None, 
-                top_k=10, 
-                num_return_sequences=max(1, int(max_return_sequences/2)) if do_beam else max_return_sequences
-                )
-        
-          for i in range(len(outputs)): # can use batch_decode, unless we want to do something special here
-            query = tokenizer.decode(outputs[i], skip_special_tokens=True)
-            if return_answer_only:
-              query = query[len(para):].lstrip(".? \n\t")
-            ret[query] = 1
+        if do_sample:
+            # Here we use top_k / top_k random sampling. It generates more diverse queries, but of lower quality
+            outputs = model.generate(
+                  input_ids=input_ids,
+                  max_length=max_length,
+                  no_repeat_ngram_size=4,
+                  do_sample=True,
+                  top_p=0.95,
+                  penalty_alpha=0.6 if do_self_contrastive else None,
+                  top_k=10,
+                  num_return_sequences=max(1, int(max_return_sequences/2)) if do_beam else max_return_sequences
+                  )
 
-      if do_beam:
+            for i in range(len(outputs)): # can use batch_decode, unless we want to do something special here
+                query = tokenizer.decode(outputs[i], skip_special_tokens=True)
+                if return_answer_only:
+                    query = query[len(para):].lstrip(".? \n\t")
+                ret[query] = 1
+
+        if do_beam:
 
         # Here we use Beam-search. It generates better quality queries, but with less diversity
-          outputs = model.generate(
-                input_ids=input_ids, 
-                max_length=max_length, 
-                num_beams=max(int(max_return_sequences/2) if do_sample else max_return_sequences,5), 
-                no_repeat_ngram_size=4,
-                penalty_alpha=0.6 if do_self_contrastive else None,  
-                num_return_sequences=max(1, int(max_return_sequences/2)) if do_sample else max_return_sequences, 
-                early_stopping=True
-            )
-    
+            outputs = model.generate(
+                  input_ids=input_ids,
+                  max_length=max_length,
+                  num_beams=max(int(max_return_sequences/2) if do_sample else max_return_sequences,5),
+                  no_repeat_ngram_size=4,
+                  penalty_alpha=0.6 if do_self_contrastive else None,
+                  num_return_sequences=max(1, int(max_return_sequences/2)) if do_sample else max_return_sequences,
+                  early_stopping=True
+              )
 
-          for i in range(len(outputs)): # can use batch_decode, unless we want to do something special here
-            query = tokenizer.decode(outputs[i], skip_special_tokens=True)
-            if return_answer_only:
-              query = query[len(para):].lstrip(".? \n\t")
-            ret[query] = 1
 
-    return list(ret.keys())  
+            for i in range(len(outputs)): # can use batch_decode, unless we want to do something special here
+                query = tokenizer.decode(outputs[i], skip_special_tokens=True)
+                if return_answer_only:
+                    query = query[len(para):].lstrip(".? \n\t")
+                ret[query] = 1
+
+    return list(ret.keys())
 
 def run_python_and_return(s):
-  try:
-    ret = {'__ret': None}
-    exec(s, ret)
-    return ret['__ret']
-  except:
-    return ''
+    try:
+        ret = {'__ret': None}
+        exec(s, ret)
+        return ret['__ret']
+    except:
+        return ''
 
 #poorman's reverb. TODO: we need to use semantic matching of relationship to paragraph to filter out bad relationships.
 def get_verb_relation(text):
-  doc = basic_nlp(text)
-  verb_relationship = ""
-  orig_verb = ""
-  for token in doc:
-    #print (token, token.tag_)
-    if token.tag_.startswith("VB") and token.tag_ not in {"VBZ", } and token.lemma_ not in {'do', 'be', 'have'}:
-      orig_verb = token.text
-      verb_relationship = str(token.lemma_)
-      continue  
-    if verb_relationship:
-      if token.tag_ == "IN":
-        orig_verb += " "+token.text
-        verb_relationship += "_"+str(token.lemma_)
-        break
-      else:
-        break
-  return verb_relationship, orig_verb
+    doc = basic_nlp(text)
+    verb_relationship = ""
+    orig_verb = ""
+    for token in doc:
+        #print (token, token.tag_)
+        if token.tag_.startswith("VB") and token.tag_ not in {"VBZ", } and token.lemma_ not in {'do', 'be', 'have'}:
+            orig_verb = token.text
+            verb_relationship = str(token.lemma_)
+            continue
+        if verb_relationship:
+            if token.tag_ == "IN":
+                orig_verb += " "+token.text
+                verb_relationship += "_"+str(token.lemma_)
+                break
+            else:
+                break
+    return verb_relationship, orig_verb
 
 #need to filter out rel that don't match embedding of full text. these are spurious
 def ner_rel_template_extract(text, min_ner_len=5, length_for_rel=50):
-  ret = {}
-  orig_text = text
-  text2 = text.replace("{", "-lbracket-").replace("}", "-rbracket-")
-  ner_cnt = {}
-  for nlp in [blackstone, sci, basic_nlp]:
-    doc =nlp(text)
-    ents = [(ent.text.strip(), ent.label_) for ent in  list(doc.ents) if len(ent.text.strip()) >= min_ner_len]
-    ents.sort(key=lambda a: len(a[0]), reverse=True)
-    for st, label in ents:
-      #we are not doing NER for code
-      if "->" in st or "{" in st or "}" in st: continue 
-      if st in text:
-        ner_cnt[label] = ner_cnt.get(label, -1)
-        ner_cnt[label] += 1
-        if ner_cnt[label] > 0:
-          text2 = text2.replace(st,'{'+label+'_'+str(ner_cnt[label])+'}')
-          ret[st] = label+'_'+str(ner_cnt[label])
-        else:
-          text2 = text2.replace(st,'{'+label+'}')
-          ret[st] = label
-        text = text.replace(st,' ')
-    rels =[]
-    if nlp == basic_nlp:
+    ret = {}
+    orig_text = text
+    text2 = text.replace("{", "-lbracket-").replace("}", "-rbracket-")
+    ner_cnt = {}
+    for nlp in [blackstone, sci, basic_nlp]:
+        doc =nlp(text)
+        ents = [(ent.text.strip(), ent.label_) for ent in  list(doc.ents) if len(ent.text.strip()) >= min_ner_len]
+        ents.sort(key=lambda a: len(a[0]), reverse=True)
+        for st, label in ents:
+            #we are not doing NER for code
+            if "->" in st or "{" in st or "}" in st: continue
+            if st in text:
+                ner_cnt[label] = ner_cnt.get(label, -1)
+                ner_cnt[label] += 1
+                if ner_cnt[label] > 0:
+                    text2 = text2.replace(st,'{'+label+'_'+str(ner_cnt[label])+'}')
+                    ret[st] = label+'_'+str(ner_cnt[label])
+                else:
+                    text2 = text2.replace(st,'{'+label+'}')
+                    ret[st] = label
+                text = text.replace(st,' ')
+        rels =[]
+        if nlp == basic_nlp:
 
-      args = dict([(b, "{"+a+"}") for a, b in ret.items() ])
-      if args:
-        print (args, '**', text2)
-        text3 = text2.format(**args)
-        text4 = text3.replace("{", " ").replace("}", " ")
-        for entity in ret.keys():
-          if "{"+entity+"}" not in text3:
-            print ('problem', "{"+entity+"}", '***', text3)
-          text5= text4[text3.index("{"+entity+"}"):]
-          if len(text5) > length_for_rel:
-            text5 = text5[:length_for_rel]
-          rel, orig_verb = get_verb_relation(text5)
-          if rel:
-            text6 = text3[text3.index("{"+entity+"}"):].split(orig_verb)[1]
-            if "{" in text6:
-              text6 = text6.split("{",1)[1]
-              if "}" in text6:
-                entity2 = text6.split("}")[0]
-                rels.append ((entity.replace(" ", "_") ,rel, entity2.replace(" ", "_") ))
-      
-  return ret, text2.replace("-lbracket-", "{").replace("-rbracket-", "}"), rels
+            args = dict([(b, "{"+a+"}") for a, b in ret.items() ])
+            if args:
+                print (args, '**', text2)
+                text3 = text2.format(**args)
+                text4 = text3.replace("{", " ").replace("}", " ")
+                for entity in ret.keys():
+                    if "{"+entity+"}" not in text3:
+                        print ('problem', "{"+entity+"}", '***', text3)
+                    text5= text4[text3.index("{"+entity+"}"):]
+                    if len(text5) > length_for_rel:
+                        text5 = text5[:length_for_rel]
+                    rel, orig_verb = get_verb_relation(text5)
+                    if rel:
+                        text6 = text3[text3.index("{"+entity+"}"):].split(orig_verb)[1]
+                        if "{" in text6:
+                            text6 = text6.split("{",1)[1]
+                            if "}" in text6:
+                                entity2 = text6.split("}")[0]
+                                rels.append ((entity.replace(" ", "_") ,rel, entity2.replace(" ", "_") ))
+
+    return ret, text2.replace("-lbracket-", "{").replace("-rbracket-", "}"), rels
 
 
 #example few shot instruction generation with gpt (JT is better at this)
@@ -725,18 +724,18 @@ import itertools
 
 
 def generate_instructions_from_query(inputs, model, tokenizer):
-  out = run_model([few_shot_query_to_instruction + "Input: "+instr for instr in inputs], model, tokenizer, max_length=256)
-  prefix_len = len(few_shot_query_to_instruction + "Input: ")
-  out = [a[prefix_len:].split("#")[0].split('Output',1) for a in out]
-  out = [(a_b[0].strip("\n: "),a_b[1].strip("\n: ")) for a_b in out if type(a_b) is list and len(a_b) > 1]
-  return (out)
+    out = run_model([few_shot_query_to_instruction + "Input: "+instr for instr in inputs], model, tokenizer, max_length=256)
+    prefix_len = len(few_shot_query_to_instruction + "Input: ")
+    out = [a[prefix_len:].split("#")[0].split('Output',1) for a in out]
+    out = [(a_b[0].strip("\n: "),a_b[1].strip("\n: ")) for a_b in out if type(a_b) is list and len(a_b) > 1]
+    return (out)
 
 def generate_query_and_instructions(model, tokenizer, max_return_sequences=3):
-  out = generate_ext(few_shot_query_to_instruction + "Input:", model, tokenizer, return_answer_only=False,  max_length=256, max_return_sequences=max_return_sequences)
-  prefix_len = len(few_shot_query_to_instruction + "Input:")
-  out = [a[prefix_len:].split("#")[0].split('Output',1) for a in out]
-  out = [(a_b[0].strip("\n: "),a_b[1].strip("\n: ")) for a_b in out if type(a_b) is list and len(a_b) > 1]
-  return (out)
+    out = generate_ext(few_shot_query_to_instruction + "Input:", model, tokenizer, return_answer_only=False,  max_length=256, max_return_sequences=max_return_sequences)
+    prefix_len = len(few_shot_query_to_instruction + "Input:")
+    out = [a[prefix_len:].split("#")[0].split('Output',1) for a in out]
+    out = [(a_b[0].strip("\n: "),a_b[1].strip("\n: ")) for a_b in out if type(a_b) is list and len(a_b) > 1]
+    return (out)
 
 #add "Input:" or "Input: {query} \nOutput:"
 
@@ -1034,11 +1033,11 @@ def generate_declarative(qaq_set):
 # Generate closed book answer to question.
 def generate_closed_answer(qaqd_set, topic_prefix):
     if topic_prefix:
-      topic_prefix= [a[0] for a in topic_prefix]
-      topic_prefix.sort(key=lambda a: len(a[0]), reverse=True)
-      topic_prefix = topic_prefix[0]
+        topic_prefix= [a[0] for a in topic_prefix]
+        topic_prefix.sort(key=lambda a: len(a[0]), reverse=True)
+        topic_prefix = topic_prefix[0]
     else:
-      topic_prefix = None
+        topic_prefix = None
     qaqd_results = set()
     for qa_item in qaqd_set:
         question = qa_item[0]
@@ -1046,9 +1045,9 @@ def generate_closed_answer(qaqd_set, topic_prefix):
         if "NA" in answer:
             # print(answer)
             if len(qa_item) == 3:
-              qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], qa_item[2]))
+                qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], qa_item[2]))
             else:
-              qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], qa_item[2],  qa_item[2]))
+                qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], qa_item[2],  qa_item[2]))
             pass
         else:
             input_text = (
@@ -1071,153 +1070,152 @@ def generate_closed_answer(qaqd_set, topic_prefix):
             )
             result = ask_flan_T5D(input_text)
             if len(qa_item) == 3:
-              qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], result))
+                qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], result))
             else:
-              qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], qa_item[3], result))
+                qaqd_results.add((qa_item[0], qa_item[1], qa_item[2], qa_item[3], result))
     return qaqd_results
 
 def mean_pooling(model_output, attention_mask):
     with torch.no_grad():
-      token_embeddings = model_output.last_hidden_state
-      input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
-      return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        token_embeddings = model_output.last_hidden_state
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).to(token_embeddings.dtype)
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 from torch.nn.functional import cosine_similarity
 
 tokenizer, model, minilm_tokenizer, minilm_model =  None, None, None, None
 
 def gen_qg_qa(paragraphs):
-  global tokenizer, model, minilm_tokenizer, minilm_model
-  # Load the model in bfloat16. Make sure to use bfloat16
-  # if you are doing inference with 16bit precision.
-  try:
-    if tokenizer is  None: assert False
-      
-  except:
-    tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-      "google/flan-t5-large",
-      device_map=device_map_T5_13B,
-      torch_dtype=torch.bfloat16,
-      load_in_8bit=False,
-  )
-    
-    minilm_tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
-    minilm_model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2').half().eval().cuda()  
+    global tokenizer, model, minilm_tokenizer, minilm_model
+    # Load the model in bfloat16. Make sure to use bfloat16
+    # if you are doing inference with 16bit precision.
+    try:
+        if tokenizer is  None: assert False
 
-  # Load strings as knowledge sources for QA generation.
-  # You can do this with a pickle.
-  #objects = []
-  #with (open("paragraphs.pkl", "rb")) as openfile:
-  #    while True:
-  #        try:
-  #            objects.append(pickle.load(openfile))
-  #        except EOFError:
-  #            break
-  # Make sure no paragraphs are too long for T5.
-  # It handles up to 512 tokens context length.
-  fixed_paragraphs = []
-  for k in paragraphs:
-      if len(k) > 1100:
-          k = k[:1100]
-  
-      fixed_paragraphs.append(k)
-  print("Original number of paragraphs:", len(paragraphs))
-  print("Length filtered number of paragraphs:", len(fixed_paragraphs))
-  paragraphs = fixed_paragraphs
-  
-  
-  # Create a dictionary of questions and answers from a list of paragraphs.
-  # Takes about 20 seconds per paragraph to process.
-  start_time = time.perf_counter()
-  questions_dict = {}
-  uniq_id = 100000
-  for paragraph in paragraphs:
-      topic_list = generate_topic(paragraph)
-      topic_prefix = generate_topic_prefix(topic_list)
-      question_set = generate_questions(paragraph, 2)
-      qa_set = generate_answers(paragraph, question_set)
-      qaq_set = generate_question2(paragraph, qa_set)
-      q2_set = set()
-      for q in qaq_set:
-          q2_set.add(q[3][0])
-      q2a2_set = generate_answers2(paragraph, q2_set)
-      a2d_set = generate_declarative(q2a2_set)
-      a3cb_set = generate_closed_answer(a2d_set, None)
-      a3cb_set = generate_closed_answer(a3cb_set, topic_prefix)
-      questions_dict[uniq_id] = {}
-      questions_dict[uniq_id]["topics"] = topic_list
-      questions_dict[uniq_id]["topic prepositions"] = topic_prefix
-      questions_dict[uniq_id]["paragraph"] = paragraph
-      entry_count = 0
-      entry_dict = {}
-      for entry in a3cb_set:
-          entry_dict[entry_count] = {}
-          entry_dict[entry_count]["question"] = entry[0]
-          entry_dict[entry_count]["answer_T5_ob"] = entry[2][0]
-          entry_dict[entry_count]["answer_T5_cb"] = entry[3][0]
-          entry_dict[entry_count]["answer_T5_cb_with_prefix"] = entry[4][0]
-          if entry_dict[entry_count]["answer_T5_ob"] == "NA":
-            entry_dict[entry_count]["answer_T5_answer"] = "Either I do not undersand this question, or this question cannot be answered."
-          else:
-            toks = minilm_tokenizer(entry_dict[entry_count]["answer_T5_ob"], padding=True, truncation=True, return_tensors="pt").to('cuda')
-            dat = minilm_model(**toks)
-            dat = mean_pooling(dat, toks.attention_mask)
-            cb_answer = entry_dict[entry_count]["answer_T5_cb"]
-              
-            toks = minilm_tokenizer(cb_answer, padding=True, truncation=True, return_tensors="pt").to('cuda')
-            dat2 = minilm_model(**toks)
-            dat2 = mean_pooling(dat2, toks.attention_mask)
-            score = cosine_similarity(dat, dat2).item()
-            if score < 0.75:
-              entry_dict[entry_count]["answer_T5_answer"] = "I don't know. I cannot tell you the answer with the information I have."
-            elif score < 0.8:
-              if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
-                entry_dict[entry_count]["answer_T5_answer"] = "I don't know for certain, but maybe "+entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]          
-              else:
-                entry_dict[entry_count]["answer_T5_answer"] = "I don't know for certain, but maybe "+ entry_dict[entry_count]["answer_T5_ob"]
-            elif score < 0.9:
-              if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
-                entry_dict[entry_count]["answer_T5_answer"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]          
-              else:
-                entry_dict[entry_count]["answer_T5_answer"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"]
+    except:
+        tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+          "google/flan-t5-large",
+          device_map=device_map_T5_13B,
+          torch_dtype=torch.bfloat16,
+          load_in_8bit=False,
+      )
+
+        minilm_tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+        minilm_model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2').half().eval().cuda()
+
+    # Load strings as knowledge sources for QA generation.
+    # You can do this with a pickle.
+    #objects = []
+    #with (open("paragraphs.pkl", "rb")) as openfile:
+    #    while True:
+    #        try:
+    #            objects.append(pickle.load(openfile))
+    #        except EOFError:
+    #            break
+    # Make sure no paragraphs are too long for T5.
+    # It handles up to 512 tokens context length.
+    fixed_paragraphs = []
+    for k in paragraphs:
+        if len(k) > 1100:
+            k = k[:1100]
+
+        fixed_paragraphs.append(k)
+    print("Original number of paragraphs:", len(paragraphs))
+    print("Length filtered number of paragraphs:", len(fixed_paragraphs))
+    paragraphs = fixed_paragraphs
+
+
+    # Create a dictionary of questions and answers from a list of paragraphs.
+    # Takes about 20 seconds per paragraph to process.
+    start_time = time.perf_counter()
+    questions_dict = {}
+    uniq_id = 100000
+    for paragraph in paragraphs:
+        topic_list = generate_topic(paragraph)
+        topic_prefix = generate_topic_prefix(topic_list)
+        question_set = generate_questions(paragraph, 2)
+        qa_set = generate_answers(paragraph, question_set)
+        qaq_set = generate_question2(paragraph, qa_set)
+        q2_set = set()
+        for q in qaq_set:
+            q2_set.add(q[3][0])
+        q2a2_set = generate_answers2(paragraph, q2_set)
+        a2d_set = generate_declarative(q2a2_set)
+        a3cb_set = generate_closed_answer(a2d_set, None)
+        a3cb_set = generate_closed_answer(a3cb_set, topic_prefix)
+        questions_dict[uniq_id] = {}
+        questions_dict[uniq_id]["topics"] = topic_list
+        questions_dict[uniq_id]["topic prepositions"] = topic_prefix
+        questions_dict[uniq_id]["paragraph"] = paragraph
+        entry_count = 0
+        entry_dict = {}
+        for entry in a3cb_set:
+            entry_dict[entry_count] = {}
+            entry_dict[entry_count]["question"] = entry[0]
+            entry_dict[entry_count]["answer_T5_ob"] = entry[2][0]
+            entry_dict[entry_count]["answer_T5_cb"] = entry[3][0]
+            entry_dict[entry_count]["answer_T5_cb_with_prefix"] = entry[4][0]
+            if entry_dict[entry_count]["answer_T5_ob"] == "NA":
+                entry_dict[entry_count]["answer_T5_answer"] = "Either I do not undersand this question, or this question cannot be answered."
             else:
-              entry_dict[entry_count]["answer_T5_answer"] = entry_dict[entry_count]["answer_T5_ob"] 
-            entry_dict[entry_count]["answer_T5_answer_with_prefix"]  = entry_dict[entry_count]["answer_T5_answer"] 
-            if len(cb_answer) < len(entry_dict[entry_count]["answer_T5_cb_with_prefix"]):
-              cb_answer = entry_dict[entry_count]["answer_T5_cb_with_prefix"]
+                toks = minilm_tokenizer(entry_dict[entry_count]["answer_T5_ob"], padding=True, truncation=True, return_tensors="pt").to('cuda')
+                dat = minilm_model(**toks)
+                dat = mean_pooling(dat, toks.attention_mask)
+                cb_answer = entry_dict[entry_count]["answer_T5_cb"]
 
-              toks = minilm_tokenizer(cb_answer, padding=True, truncation=True, return_tensors="pt").to('cuda')
-              dat2 = minilm_model(**toks)
-              dat2 = mean_pooling(dat2, toks.attention_mask)
-              if score < cosine_similarity(dat, dat2).item():
-                if cosine_similarity(dat, dat2).item() < 0.75:
-                  entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I don't know. I cannot tell you the answer with the information I have."
-                elif cosine_similarity(dat, dat2).item() < 0.8:
-                  if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
-                    entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I don't know for certain, but maybe "+entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]          
-                  else:
-                    entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I don't know for certain, but maybe "+ entry_dict[entry_count]["answer_T5_ob"]
-                elif cosine_similarity(dat, dat2).item() < 0.9:
-                  if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
-                    entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]          
-                  else:
-                    entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"]
+                toks = minilm_tokenizer(cb_answer, padding=True, truncation=True, return_tensors="pt").to('cuda')
+                dat2 = minilm_model(**toks)
+                dat2 = mean_pooling(dat2, toks.attention_mask)
+                score = cosine_similarity(dat, dat2).item()
+                if score < 0.75:
+                    entry_dict[entry_count]["answer_T5_answer"] = "I don't know. I cannot tell you the answer with the information I have."
+                elif score < 0.8:
+                    if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
+                        entry_dict[entry_count]["answer_T5_answer"] = "I don't know for certain, but maybe "+entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]
+                    else:
+                        entry_dict[entry_count]["answer_T5_answer"] = "I don't know for certain, but maybe "+ entry_dict[entry_count]["answer_T5_ob"]
+                elif score < 0.9:
+                    if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
+                        entry_dict[entry_count]["answer_T5_answer"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]
+                    else:
+                        entry_dict[entry_count]["answer_T5_answer"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"]
                 else:
-                  entry_dict[entry_count]["answer_T5_answer_with_prefix"] = entry_dict[entry_count]["answer_T5_ob"] 
+                    entry_dict[entry_count]["answer_T5_answer"] = entry_dict[entry_count]["answer_T5_ob"]
+                entry_dict[entry_count]["answer_T5_answer_with_prefix"]  = entry_dict[entry_count]["answer_T5_answer"]
+                if len(cb_answer) < len(entry_dict[entry_count]["answer_T5_cb_with_prefix"]):
+                    cb_answer = entry_dict[entry_count]["answer_T5_cb_with_prefix"]
 
-              #'**', entry_dict[entry_count]["answer_T5_ob"], '**', entry_dict[entry_count]["answer_T5_cb"])
-          entry_count += 1
-      questions_dict[uniq_id]["QA_set"] = entry_dict
-      uniq_id += 1
-      print(uniq_id, "topics:", topic_prefix)
+                    toks = minilm_tokenizer(cb_answer, padding=True, truncation=True, return_tensors="pt").to('cuda')
+                    dat2 = minilm_model(**toks)
+                    dat2 = mean_pooling(dat2, toks.attention_mask)
+                    if score < cosine_similarity(dat, dat2).item():
+                        if cosine_similarity(dat, dat2).item() < 0.75:
+                            entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I don't know. I cannot tell you the answer with the information I have."
+                        elif cosine_similarity(dat, dat2).item() < 0.8:
+                            if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
+                                entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I don't know for certain, but maybe "+entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]
+                            else:
+                                entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I don't know for certain, but maybe "+ entry_dict[entry_count]["answer_T5_ob"]
+                        elif cosine_similarity(dat, dat2).item() < 0.9:
+                            if entry_dict[entry_count]["answer_T5_ob"].split()[0].lower() in {'the', 'this', 'a', 'an'}:
+                                entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"][0].lower()+ entry_dict[entry_count]["answer_T5_ob"][1:]
+                            else:
+                                entry_dict[entry_count]["answer_T5_answer_with_prefix"] = "I believe "+ entry_dict[entry_count]["answer_T5_ob"]
+                        else:
+                            entry_dict[entry_count]["answer_T5_answer_with_prefix"] = entry_dict[entry_count]["answer_T5_ob"]
 
-  stop_time = time.perf_counter()
-  generation_time = stop_time - start_time
-  print(questions_dict[uniq_id - 1])
-  print(generation_time)
+                    #'**', entry_dict[entry_count]["answer_T5_ob"], '**', entry_dict[entry_count]["answer_T5_cb"])
+            entry_count += 1
+        questions_dict[uniq_id]["QA_set"] = entry_dict
+        uniq_id += 1
+        print(uniq_id, "topics:", topic_prefix)
 
-  for qd in questions_dict.values():  
-      output.write(json.dumps(qd)+"\n")
-  return questions_dict
+    stop_time = time.perf_counter()
+    generation_time = stop_time - start_time
+    print(questions_dict[uniq_id - 1])
+    print(generation_time)
 
+    for qd in questions_dict.values():
+        output.write(json.dumps(qd)+"\n")
+    return questions_dict

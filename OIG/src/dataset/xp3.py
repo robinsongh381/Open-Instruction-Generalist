@@ -41,7 +41,7 @@ class XP3(OIGBase):
             os.system("mv merged_en.jsonl data/xp3")
 
     def __call__(self):    
-        self.prepare_dataset()        
+        self.prepare_dataset()
         output = []
         
         for idx, l in tqdm(enumerate(open(self.dataset_path))):
@@ -163,7 +163,7 @@ class XP3(OIGBase):
                 modified_inputs = ".".join(val).replace(" .", ".").strip()
                 if (span_1 or span_2) and len(val) > 10:
                     span_summary = run_model("summarize: " + span_1 + ". " + span_2, t5_model, t5_tokenizer, max_length=512)[0]
-                    print ('###', span_summary, '##', span_1, '###', span_2)
+                    # print ('###', span_summary, '##', span_1, '###', span_2)
                     val[remove_1] = span_summary
                     modified_inputs_with_summary = ".".join(val).replace(" .", ".").strip()
 
@@ -173,11 +173,11 @@ class XP3(OIGBase):
                 items.sort(key=lambda a: len(a[1]), reverse=True)
                 orig_key, val = items[0]
 
-                print (f"User: What kind of text is this?\n{val}\n\nAssistant: This appears to be a type of {orig_key}.")
+                # print (f"User: What kind of text is this?\n{val}\n\nAssistant: This appears to be a type of {orig_key}.")
                 items = items[1:]
                 if items and random.randint(0,1) == 0:
                     key, val = items[0]
-                    print (f"User: What is a possible {key} for this {orig_key}? \n\nAssistant: A possible {key} for this {orig_key} could be '{val}'.")
+                    # print (f"User: What is a possible {key} for this {orig_key}? \n\nAssistant: A possible {key} for this {orig_key} could be '{val}'.")
 
             if genre:
                 targets = "Here is a "+genre + ". " + targets
@@ -210,7 +210,7 @@ class XP3(OIGBase):
                     # instance = {'text': text, 'metadata': {'source': f'xp3_{lang}'}}                        
                     # print (f"User: {text}\n{instr}\n\nAssistant: {targets}")
 
-            instance = {'text': text, 'metadata': {'source': 'xp3_merged_en}}
+            instance = {'text': text, 'metadata': {'source': 'xp3_merged_en'}}
             output.append(instance)
 
         # save output

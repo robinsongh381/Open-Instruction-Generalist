@@ -11,6 +11,10 @@
 - [x] image_prompting_instructions # dataset_path
 - [x] flanv2_cot
 - [x] xp3_code
+- [x] xp3
+- [x] abstract_infill
+- [x] ul2_oscar
+
 
 ### Tasks with Issue
 - poetry
@@ -18,10 +22,9 @@
 - soda_dialog
   - Get error for [this line](https://github.com/LAION-AI/Open-Instruction-Generalist/blob/main/OIG/src/soda_dialog.py#L51) because `dialog` is a list rather than being str 
   
+  
 ### ToDo Tasks
-- [] abstract_infill
-- [] labeled_safety
-- [] xp3
+- [ ] labeled_safety
 
 
 ### Note

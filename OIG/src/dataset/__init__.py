@@ -21,6 +21,7 @@ under the License.
 from src.dataset.base import OIGBase
 from src.dataset.codeparrot_jupyter_summary import CodeParrortJupyterSummary
 from src.dataset.poetry import PoetryGeneration
+from src.dataset.soda_dialog import SodaDialogue
 from src.dataset.kojma_cot import KojmaCoT
 from src.dataset.unnatural_instructions import UnnaturalInstructions
 from src.dataset.cuad import CUAD
@@ -30,12 +31,15 @@ from src.dataset.image_prompting_instructions import ImagePromptingInstructions
 from src.dataset.unified_skg import UnifiedSKG
 from src.dataset.flanv2_cot import FLANCoT
 from src.dataset.xp3_code import XP3Code
+from src.dataset.xp3 import XP3
+from src.dataset.abstract_infill import AbstractInfill
+from src.dataset.ul2_oscar import UL2_OSCAR
 
-# from src.dataset.soda_dialog import SodaDialogue
 
 
 AVAILABLE_TASKS_DICT = {
-    'kojma_cot': KojmaCoT,    
+    'kojma_cot': KojmaCoT,
+    'soda_dialog': SodaDialogue,
     'poetry': PoetryGeneration,
     'codeparrot_jupyter_summary': CodeParrortJupyterSummary,
     'unnatural_instructions': UnnaturalInstructions,
@@ -45,11 +49,10 @@ AVAILABLE_TASKS_DICT = {
     'image_prompting_instructions': ImagePromptingInstructions,
     'unified_skg': UnifiedSKG,
     'flanv2_cot':FLANCoT,
-    'xp3_code': XP3Code
-    # 'soda_dialog': SodaDialogue,
-    # 'abstract_infill',    
+    'xp3_code': XP3Code,
+    'xp3': XP3,
+    'abstract_infill': AbstractInfill,
+    'ul2_oscar': UL2_OSCAR,
     # 'labeled_safety',
-    # 'xp3',
-    # 'ul2_oscar',
 }
 

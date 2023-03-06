@@ -34,4 +34,5 @@ class OIGBase():
     def save_output(self, output, save_path):
         with open(save_path,"w") as file:
             json.dump(output,file)
+            print(f"Saved {len(output)} instances under {save_path}")
 

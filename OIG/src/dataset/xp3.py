@@ -37,6 +37,7 @@ class XP3(OIGBase):
         
     def prepare_dataset(self):        
         if not os.path.exists(self.dataset_path):
+            os.makedirs("data/xp3", exist_ok=True)            
             os.system("wget https://huggingface.co/datasets/bigscience/xP3/resolve/main/en/merged_en.jsonl")
             os.system("mv merged_en.jsonl data/xp3")
 

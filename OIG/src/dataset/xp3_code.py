@@ -30,13 +30,13 @@ class XP3Code(OIGBase):
     def __init__(self, output_path, hf_dataset_name=None):
         super().__init__()
         self.output_path = output_path
-        self.dataset_path = "data/xP3_code/merged_code.jsonl"
+        self.dataset_path = "data/xp3_code/merged_code.jsonl"
         
     def prepare_dataset(self):
         if not os.path.exists(self.dataset_path):
-            os.makedirs("data/xP3_code")
+            os.makedirs("data/xP3_code", exist_ok=True)
             os.system("wget https://huggingface.co/datasets/bigscience/xP3/resolve/main/code/merged_code.jsonl")
-            os.system("mv merged_code.jsonl data/xP3_code")
+            os.system("mv merged_code.jsonl data/xp3_code")
 
     def __call__(self):
         self.prepare_dataset()
